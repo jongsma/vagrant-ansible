@@ -1,0 +1,61 @@
+---
+ - name: Check if RDBMS is installed
+   shell: cat /u01/app/oraInventory/ContentsXML/inventory.xml | grep OraDB12Home1 | cut -d\" -f4
+   register: rdbms_check
+
+ - name: Check if $ORACLE_BASE exists
+   shell: ls -la {{ ora_base }} | wc -l
+   register: ora_base_exist
+
+ - name: Check if staging area exists
+   shell: ls -la {{ ora_stage }} | wc -l
+   register: ora_stage_exist
+
+ - name: Create staging directory 
+   file: dest={{ ora_stage }} mode=775 owner={{ oracle_user }} group={{ oracle_group }} state=directory
+   when: ora_stage_exist.stdout =="0"
+  
+ - name: Create ORACLE_BASE directory
+   file: dest={{ ora_base }} mode=775 owner={{ oracle_user }} group={{ oracle_group }} state=directory
+   when: ora_base_exist.stdout == "0"
+   
+ - name: Adjust limits.conf
+   lineinfile: dest=/etc/security/limits.conf insertbefore="# End of file" line="oracle  hard  memlock  3145728"  
+
+ - name: Copy RDBMS zipfiles
+   copy: src={{ item }} dest={{ ora_stage }} owner={{ oracle_user }} group={{ oracle_group }} mode=0644
+   with_items: "{{ rdbms_zips }}"
+   when: inventory_hostname == "{{ gi_first_node }}" and rdbms_check.stdout != rdbms_home
+   
+ - name: Unzip installation media
+   unarchive: copy=no src={{ ora_stage }}/{{ item }} dest={{ ora_stage }}
+   with_items: "{{ rdbms_zips }}"
+   when: inventory_hostname == "{{ gi_first_node }}" and rdbms_check.stdout != rdbms_home
+   
+ - name: Change ownership of installation media to oracle
+   file: path={{ ora_stage }}/database owner={{ oracle_user }} group={{ oracle_group }} state=directory recurse=yes
+   when: inventory_hostname == "{{ gi_first_node }}" and rdbms_check.stdout != rdbms_home
+     
+ - name: Create response file from template
+   template: src={{ rdbms_response }}.j2 dest={{ ora_stage }}/{{ rdbms_response }} owner=oracle group=oinstall
+   when: inventory_hostname == "{{ gi_first_node }}" and rdbms_check.stdout != rdbms_home
+
+ - name: Install RDBMS Software
+   shell: "{{ ora_stage }}/database/runInstaller -responseFile {{ ora_stage }}/{{ rdbms_response }} -ignorePrereq -ignoreSysPrereqs -silent -waitforcompletion"
+   become: yes
+   become_user: "{{ rdbms_inst_user }}"
+   when: inventory_hostname == "{{ gi_first_node }}" and rdbms_check.stdout != rdbms_home
+   register: rdbms_install_result
+
+ - name: Run root.sh on first node
+   shell: "{{ rdbms_home }}/root.sh"
+   become: yes
+   when: inventory_hostname == "{{ gi_first_node }}" and rdbms_check.stdout != rdbms_home
+
+ - name: Run root.sh on last node
+   shell: "{{ rdbms_home }}/root.sh"
+   become: yes
+   when: inventory_hostname == "{{ gi_last_node }}" and rdbms_check.stdout != rdbms_home
+
+ - name: Remove temporary install files
+   file: path={{ ora_stage }} state=absent

@@ -1,0 +1,13 @@
+---
+  user_for_sudo: oracle
+  python_keyczar_url: "http://dl.fedoraproject.org/pub/epel/6/x86_64/python-keyczar-0.71c-1.el6.noarch.rpm"
+  epel_rpm_url: "http://ftp.nluug.nl/pub/os/Linux/distr/fedora-epel/6/i386/epel-release-6-8.noarch.rpm"
+  remote_user: root
+  become: yes
+
+  package_list:
+   - libselinux-python
+   - oracle-rdbms-server-12cR1-preinstall
+   - dnsmasq
+   - "@Development tools"
+   - "{{ epel_rpm_url }}"

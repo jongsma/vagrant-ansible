@@ -1,0 +1,20 @@
+---
+    asm_passwd    : oracle
+    asm_dbsnmp    : oracle
+    asm_inst_user : oracle
+    asm_prim_dg   : DATA
+    asm_sec_dg    : FRA
+    asm_response  : grid.rsp
+    asm_redundancy: EXTERNAL
+    asm_disklist_p: "{{ asm_diskprefix }}/ASMDISK1,{{ asm_diskprefix }}/ASMDISK2"
+    asm_disklist_s: "{{ asm_diskprefix }}/ASMDISK3,{{ asm_diskprefix }}/ASMDISK4"
+    
+    gi_home       : /u01/app/12.1.0.2/grid
+    gi_clus_name  : rac-cluster
+    gi_clus_type  : STANDARD
+    gi_storage    : FLEX_ASM_STORAGE
+    gi_config_rsp : cfgrsp.properties
+    
+    grid_zips:
+       - p21419221_121020_Linux-x86-64_5of10.zip
+       - p21419221_121020_Linux-x86-64_6of10.zip

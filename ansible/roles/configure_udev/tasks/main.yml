@@ -1,0 +1,44 @@
+- name: Get roles info
+  debug: var=role_names
+
+- name: Get devive list
+  shell: "ls /dev/sd[a-z]"
+  register: device_list
+
+- name: Create disk partitions
+  shell: echo "0," | sfdisk -q {{item.1}}
+  with_indexed_items: "{{ device_list.stdout_lines }}"
+  when: "{{ item.0 }} > 0"
+  become: true
+  run_once: true
+  register: sfdisk_output
+
+- name: Build scsi_id.config
+  lineinfile: dest=/etc/scsi_id.config create=yes line='options=-g'
+
+- name: get scsi_id
+  shell: "/sbin/scsi_id -g -u -d {{ item }}"
+  with_items: "{{ device_list.stdout_lines }}"
+  register: scsi_id
+
+- name: Build oracle-asmdevices.rules
+  lineinfile: dest=/etc/udev/rules.d/99-oracle-asmdevices.rules create=yes line='KERNEL=="sd?1", BUS=="scsi", PROGRAM=="/sbin/scsi_id -g -u -d /dev/$parent",  RESULT=="{{ item.1.stdout }}" NAME="ASMDISK{{ item.0 }}", OWNER="oracle", GROUP="dba", MODE="0660"'
+  with_indexed_items: "{{ scsi_id.results }}"
+  when: "{{ item.0 }} > 0"
+
+- name: Get partition list
+  shell: "ls /dev/sd[b-z]"
+  register: partlist
+
+- name: Make OS aware of partitions
+  shell: "partprobe {{ item }}"
+  become: true
+  with_items: "{{ partlist.stdout_lines }}"  
+
+- name: Reload udev rules
+  shell: "/sbin/udevadm control --reload-rules"
+  become: true
+
+- name: Start udev
+  shell: "/sbin/start_udev"
+  become: true

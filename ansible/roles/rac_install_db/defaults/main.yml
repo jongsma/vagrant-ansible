@@ -1,0 +1,9 @@
+---
+    rdbms_response  : db.rsp
+    rdbms_group     : dba
+    rdbms_inst_user : oracle
+    rdbms_dbca_rsp  : dbca.rsp
+        
+    rdbms_zips:
+       - p21419221_121020_Linux-x86-64_1of10.zip
+       - p21419221_121020_Linux-x86-64_2of10.zip

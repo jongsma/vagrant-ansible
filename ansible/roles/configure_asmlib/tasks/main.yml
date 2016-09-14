@@ -1,0 +1,45 @@
+---
+- name: Get roles info
+  debug: var=role_names
+
+- name: Get devive list
+  shell: "ls /dev/sd[a-z]"
+  register: device_list
+
+- name: Create disk partitions
+  shell: echo "0," | sfdisk -q {{item.1}}
+  with_indexed_items: "{{ device_list.stdout_lines }}"
+  when: "{{ item.0 }} > 0"
+  become: true
+  run_once: true
+  register: sfdisk_output
+  
+- name: Create staging directory 
+  file: dest={{ ora_stage }} mode=775 owner={{ oracle_user }} group={{ oracle_group }} state=directory
+  
+- name: Install oracleasm kernel modules
+  yum: name=kmod-oracleasm state=present
+  become: true
+
+- name: Install Oracle Automatic Storage Management library driver
+  yum: name=oracleasm-support state=present
+  become: true
+
+- name: Copy ASMLib config script
+  copy: src=configure_asmlib.sh dest={{ ora_stage }}/configure_asmlib.sh owner=root mode=0740
+        
+- name: Configure ASMLib
+  shell: "{{ ora_stage }}/configure_asmlib.sh"
+  become: true
+  
+- name: Create 
+  shell: "i=1;for dev in `ls /dev/sd*1 | grep -v a`; do sudo /etc/init.d/oracleasm createdisk ASMDISK$((i++)) $dev; done"
+  become: true
+  run_once: true
+
+- name: Scan for ASMLib
+  shell: "/etc/init.d/oracleasm scandisks"
+  become: true
+
+- name: Remove temporary install files
+  file: path={{ ora_stage }} state=absent

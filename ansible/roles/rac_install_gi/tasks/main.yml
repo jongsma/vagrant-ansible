@@ -1,0 +1,151 @@
+---
+- set_fact: asm_diskstring="/dev/oracleasm/disks"
+  when: "'configure_asmlib' in role_names"
+
+- set_fact: asm_diskprefix="/dev/oracleasm/disks"
+  when: "'configure_asmlib' in role_names"
+
+- set_fact: asm_diskstring="/dev/ASMDISK*"
+  when: "'configure_udev' in role_names"
+  
+- set_fact: asm_diskprefix="/dev"
+  when: "'configure_udev' in role_names"
+
+- name: Check if GI is installed
+  shell: cat /u01/app/oraInventory/ContentsXML/inventory.xml | grep OraGI12Home1 | cut -d\" -f4
+  register: gi_check
+
+- name: Create staging directory 
+  file: dest={{ ora_stage }} mode=775 owner={{ oracle_user }} group={{ oracle_group }} state=directory
+   
+- name: Create ORACLE_BASE directory
+  file: dest={{ ora_base }} mode=775 owner={{ oracle_user }} group={{ oracle_group }} state=directory
+  when: gi_check.stdout != gi_home
+ 
+- name: Generate SSH key for user Oracle
+  user: name={{ oracle_user }} generate_ssh_key=yes state=present
+  when: gi_check.stdout != gi_home
+ 
+- name: Downloading public key node1
+  fetch: src=/home/{{ oracle_user }}/.ssh/id_rsa.pub dest=oracle_id_rsa.{{ gi_first_node }} flat=yes
+  with_items: "{{groups['all']}}"
+  when: inventory_hostname == "{{ gi_first_node }}" and gi_check.stdout != gi_home
+ 
+- name: Downloading public key node1
+  fetch: src=/home/{{ oracle_user }}/.ssh/id_rsa.pub dest=oracle_id_rsa.{{ gi_last_node }} flat=yes
+  with_items: "{{groups['all']}}"
+  when: inventory_hostname == "{{ gi_last_node }}" and gi_check.stdout != gi_home
+ 
+- name: Copy public key to all hosts
+  authorized_key: user=oracle key="{{ lookup('file', 'oracle_id_rsa.{{ item }}') }}"
+  with_items: "{{groups['all']}}"
+  become: yes
+  become_user: "{{ asm_inst_user }}"
+  when: gi_check.stdout != gi_home
+
+- name: Make sure the known hosts file exists
+  file: path=~/.ssh/known_hosts state=touch
+  become: yes
+  become_user: "{{ asm_inst_user }}"
+  when: gi_check.stdout != gi_home 
+
+- name: Add hosts to known_hosts
+  shell: ssh-keyscan -H {{ item }} >> ~/.ssh/known_hosts
+  with_items: "{{groups['all']}}"
+  become: yes
+  become_user: "{{ asm_inst_user }}"
+  when: gi_check.stdout != gi_home
+ 
+- name: Copy GI zipfiles
+  copy: src={{ item }} dest={{ ora_stage }} owner={{ oracle_user }} group={{ oracle_group }} mode=0644
+  with_items: "{{ grid_zips}}"
+  when: inventory_hostname == "{{ gi_first_node }}" and gi_check.stdout != gi_home
+
+- name: Unzip installation media
+  unarchive: copy=no src={{ ora_stage }}/{{ item }} dest={{ ora_stage }}
+  with_items: "{{ grid_zips}}"
+  when: inventory_hostname == "{{ gi_first_node }}" and gi_check.stdout != gi_home
+
+- name: Change ownership of installation media to oracle
+  file: path={{ ora_stage }}/grid owner={{ oracle_user }} group={{ oracle_group }} state=directory recurse=yes
+  when: inventory_hostname == "{{ gi_first_node }}" and gi_check.stdout != gi_home
+ 
+- name: download cvuqdisk
+  fetch: src={{ ora_stage }}/grid/rpm/cvuqdisk-1.0.9-1.rpm dest=cvuqdisk-1.0.9-1.rpm flat=yes
+  when: inventory_hostname == "{{ gi_first_node }}" and gi_check.stdout != gi_home
+
+- name: uploud cvuqdisk to all hosts
+  copy: src=cvuqdisk-1.0.9-1.rpm dest={{ ora_stage }}
+  when: gi_check.stdout != gi_home
+ 
+- name: install cvuqdisk
+  yum: name={{ ora_stage }}/cvuqdisk-1.0.9-1.rpm state=present
+  when: gi_check.stdout != gi_home
+ 
+- name: Create grid response file from template
+  template: src={{ asm_response }}.j2 dest={{ ora_stage }}/{{ asm_response }} owner=oracle group=oinstall
+  with_items: "{{ network_ether_interfaces }}"
+  when: inventory_hostname == "{{ gi_first_node }}" and gi_check.stdout != gi_home
+ 
+- name: Install Grid Infrastructure
+  shell: "{{ ora_stage }}/grid/runInstaller -responseFile {{ ora_stage }}/{{ asm_response }} -waitforcompletion -ignorePrereq -ignoreSysPrereqs -showProgress -silent"
+  become: yes
+  become_user: "{{ asm_inst_user }}"
+  when: inventory_hostname == "{{ gi_first_node }}" and gi_check.stdout != gi_home
+
+- name: Run oraInstroot script on first node
+  shell: "{{ ora_inventory }}/orainstRoot.sh"
+  become: yes
+  when: inventory_hostname == "{{ gi_first_node }}" and gi_check.stdout != gi_home
+
+- name: Run oraInstroot script on last node
+  shell: "{{ ora_inventory }}/orainstRoot.sh"
+  become: yes
+  when: inventory_hostname == "{{ gi_last_node }}" and gi_check.stdout != gi_home
+
+- name: Run root script on first node
+  shell: "{{ gi_home }}/root.sh"
+  become: yes
+  when: inventory_hostname == "{{ gi_first_node }}" and gi_check.stdout != gi_home
+
+- name: Run root script on last node
+  shell: "{{ gi_home }}/root.sh"
+  become: yes
+  when: inventory_hostname == "{{ gi_last_node }}" and gi_check.stdout != gi_home
+ 
+- name: Create grid response file from template
+  template: src={{ gi_config_rsp }}.j2 dest={{ ora_stage }}/{{ gi_config_rsp }} owner=oracle group=oinstall
+  when: inventory_hostname == "{{ gi_first_node }}" and gi_check.stdout != gi_home
+
+- name: Run configToolAllCommands script
+  shell: "{ gi_home }}/cfgtoollogs/configToolAllCommands RESPONSE_FILE={{ ora_stage }}/{{ gi_config_rsp }}"
+  become: yes
+  become_user: "{{ asm_inst_user }}"
+  when: inventory_hostname == "{{ gi_first_node }}" and gi_check.stdout != gi_home
+  ignore_errors: true   
+
+- name: Create +FRA diskgroup
+  shell: "{{gi_home}}/bin/asmca -silent -sysAsmPassword {{ asm_passwd }} -asmsnmpPassword {{ asm_dbsnmp }} -createDiskGroup -diskString {{ asm_diskprefix }} -diskGroupName {{ asm_sec_dg }} -diskList {{ asm_disklist_s }} -redundancy {{ asm_redundancy}}" 
+  become: yes
+  become_user: "{{ asm_inst_user }}"
+  when: inventory_hostname == "{{ gi_first_node }}" and gi_check.stdout != gi_home
+ 
+- name: Copy mdbutil script
+  copy: src=mdbutil.pl dest={{ gi_home }}/bin/mdbutil owner={{ oracle_user }} group={{ oracle_group }} mode=0740
+
+#- name: Create -MGMTDB database
+#  shell: |
+#   {{ gi_home }}/bin/mdbutil --addmdb --target=+DATA << EOF
+#   {{ root_pwd }}
+#   {{ root_pwd }}
+#   EOF
+#  register: mdbutil_output
+#  become: yes
+#  become_user: "{{ asm_inst_user }}"
+#  run_once: true
+#
+#- name: Debug mdbutil output
+#  debug: var=mdbutil_output
+
+- name: Remove temporary install files
+  file: path={{ ora_stage }} state=absent

@@ -1,0 +1,16 @@
+---
+- name            : Install GI and RAC 
+  hosts           : all
+  any_errors_fatal: true
+  gather_facts    : true
+  become          : true
+  roles           :
+  - common
+  - configure_network
+  - { role: configure_udev,   when: devmanager == "udev" }
+  - { role: configure_asmlib, when: devmanager == "asmlib" }
+  - tools_install
+  - rac_install_gi
+  - rac_install_db
+  - rac_create_db
+ 

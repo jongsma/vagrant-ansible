@@ -1,0 +1,14 @@
+---
+    ora_stage        : /u01/stage
+    ora_inventory    : /u01/app/oraInventory
+    ora_base         : /u01/app/oracle
+    oracle_user      : oracle
+    oracle_group     : oinstall
+    oracle_asmgrp    : dba
+    oracle_oper      :
+    root_pwd         : vagrant
+    rdbms_home       : "{{ ora_base }}/product/12.1.0.2/dbhome_1"
+    tools_home       : /u01/tools
+#    domain_name      : mydomain.local
+#    gi_first_node    : rac1
+#    gi_last_node     : rac2

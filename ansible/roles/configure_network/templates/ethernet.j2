@@ -1,0 +1,31 @@
+# {{ ansible_managed }}
+{% if item.bootproto == 'static' %}
+DEVICE={{ item.device }}
+BOOTPROTO=static
+{% if item.address is defined %}
+IPADDR={{ item.address }}
+{% endif %}
+{% if item.onboot is defined %}
+ONBOOT={{ item.onboot }}
+{% endif %}
+{% if item.peerdns is defined %}
+PEERDNS={{ item.peerdns }}
+{% endif %}
+{% if item.defroute is defined %}
+DEFROUTE={{ item.defroute }}
+{% endif %}
+{% if item.netmask is defined %}
+NETMASK={{ item.netmask }}
+{% endif %}
+{% if item.gateway is defined %}
+GATEWAY={{ item.gateway }}
+{% endif %}
+{% if item.mac is defined %}
+HWADDR={{ item.mac }}
+{% endif %}
+{% endif %}
+
+{% if item.bootproto == 'dhcp' %}
+DEVICE={{ item.device }}
+BOOTPROTO=dhcp
+{% endif %}

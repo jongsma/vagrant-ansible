@@ -1,0 +1,22 @@
+---
+  - name: Create $TOOLS_HOME
+    file: dest={{ tools_home }} mode=775 owner={{ oracle_user }} group={{ oracle_group }} state=directory
+    
+  - name: Clone tools from Github
+    git: repo=https://github.com/FritsHoogland/tools.git dest={{ tools_home }}
+    become: true
+    become_user: oracle
+    
+  - name: Install rlwrap
+    yum: name={{ tools_home }}/rpm/x86_64/rlwrap-0.42-1.el6.x86_64.rpm state=present
+    become: true
+    become_user: root
+    
+  - name: Add tools to .bash_profile (vagrant)
+    lineinfile: dest=/home/vagrant/.bash_profile line=". {{ tools_home }}/bin/profile"
+
+  - name: Add tools to .bash_profile (oracle)
+    lineinfile: dest=/home/oracle/.bash_profile line=". {{ tools_home }}/bin/profile"
+
+  - name: Add user vagrant to dba group
+    user: name=vagrant groups=dba

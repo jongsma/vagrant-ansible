@@ -1,0 +1,13 @@
+# {{ ansible_managed }}
+
+127.0.0.1 localhost
+{% for host in groups['all'] %}
+{{ hostvars[host]['ansible_eth2']['ipv4']['address'] }} {{ hostvars[host]['ansible_hostname'] }}
+{{ hostvars[host]['ansible_eth2']['ipv4']['address'] | regex_replace('(^.*\.).*$', '\\1') }}{{ hostvars[host]['ansible_eth2']['ipv4']['address'].split('.')[3] | int + 10 }} {{ hostvars[host]['ansible_hostname'] }}-vip
+{{ hostvars[host]['ansible_eth1']['ipv4']['address'] }} {{ hostvars[host]['ansible_hostname'] }}-priv
+{% endfor %}
+{% set count = 1 %}
+{% for i in range(1,4) %}
+{{ hostvars[inventory_hostname]['ansible_eth2']['ipv4']['address'] | regex_replace('(^.*\.).*$', '\\1') }}{{ count | int +250 }} rac-cluster-scan
+{% set count = count + 1 %}
+{% endfor %}

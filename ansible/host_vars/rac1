@@ -1,0 +1,15 @@
+network_ether_interfaces:
+       - device: eth1
+         bootproto: static
+         onboot: yes
+         address: 172.16.100.51
+         netmask: 255.255.255.0
+         mac: 08:00:27:AA:AA:11
+         grid_net: 5
+       - device: eth2
+         bootproto: static
+         onboot: yes
+         address: 192.168.78.51
+         netmask: 255.255.255.0
+         mac: 08:00:27:AA:AA:12
+         grid_net: 1

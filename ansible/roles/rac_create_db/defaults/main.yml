@@ -1,0 +1,19 @@
+---
+  db_dbca_rsp    : dbca.rsp
+  
+# db_name        : nocdb
+  db_type        : RAC
+  db_passwd      : oracle
+  db_dbsnmp_pwd  : oracle
+  db_storage_type: ASM
+  db_dg_name     : DATA
+  db_dg_fra      : FRA
+  db_characterset: AL32UTF8
+# db_total_mem   : 800
+  db_use_amm     : FALSE
+  
+# db_create_cdb  : false
+# db_pdb_amount  : 0
+  db_pdb_prefix  : pdb
+  db_pdb_passwd  : oracle
+  

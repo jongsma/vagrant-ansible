@@ -1,0 +1,5 @@
+oracle.install.crs.config.networkInterfaceList=
+{%- for msg in network_ether_interfaces %}
+{{ msg.device }}:{{ msg.address | regex_replace('(^.*\.).*$', '\\1') }}0:{{ msg.grid_net }},
+{%- endfor %}
+eth0:{{ hostvars[inventory_hostname]['ansible_eth0']['ipv4']['address'] | regex_replace('(^.*\.).*$', '\\1') }}0:3

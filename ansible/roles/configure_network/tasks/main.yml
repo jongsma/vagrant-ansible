@@ -1,0 +1,50 @@
+--- 
+- name: Setup udev for network devices
+  replace: dest=/etc/udev/rules.d/70-persistent-net.rules regexp='ATTR.*{{ item.device }}' replace='ATTR{address}=="{{ item.mac|lower }}", ATTR{type}=="1", KERNEL=="eth*", NAME="{{ item.device }}'
+  with_items: "{{ network_ether_interfaces }}"
+  when: network_ether_interfaces is defined
+  register: udev_net
+
+- name: Reload udev rules
+  shell: "/sbin/udevadm control --reload-rules"
+  become: true
+
+- name: Start udev
+  shell: "/sbin/start_udev"
+  become: true
+ 
+- name: Create the network configuration for ethernet devices
+  template: src=ethernet.j2 dest=/etc/sysconfig/network-scripts/ifcfg-{{ item.device }}
+  with_items: "{{ network_ether_interfaces }}"
+  when: network_ether_interfaces is defined
+  register: ether_result
+ 
+- name: bring up network devices
+  shell: ifdown {{ item.item.device }}; ifup {{ item.item.device }}
+  with_items: "{{ ether_result.results }}"
+  when: ether_result is defined and item.changed
+ 
+- name: Gather facts
+  setup: gather_subset=all
+
+- name: Create /etc/hosts files with correct entries
+  template: src=hosts.j2 dest=/etc/hosts
+
+- name: Remove all nameservers resolv file
+  lineinfile: dest=/etc/resolv.conf regexp="^nameserver" state=absent 
+
+- name: Add localhost to resolv.conf
+  lineinfile: dest=/etc/resolv.conf state=present line="nameserver 127.0.0.1"
+
+- name: Create dnsmasq configuration
+  template: src=dnsmasq.conf.j2 dest=/etc/dnsmasq.conf
+  with_items: "{{ ether_result.results }}"
+
+- name: Enable dnsmasq service
+  service: name=dnsmasq state=started enabled=yes
+
+- name: Check if network is up-and-running
+  shell: ping -c1 {{ gi_first_node }}
+  
+- name: Check if network is up-and-running
+  shell: ping -c1 {{ gi_last_node }}  

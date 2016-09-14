@@ -1,0 +1,14 @@
+# {{ ansible_managed }}
+#/etc/dnsmasq.conf
+domain-needed
+bogus-priv
+
+domain={{ domain_name }}
+expand-hosts
+local=/{{ domain_name }}/
+
+server=10.0.2.3
+
+interface=eth0
+{% for msg in ether_result.results %}interface={{ msg.item.device }}
+{% endfor %}

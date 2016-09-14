@@ -1,0 +1,28 @@
+--- 
+- name: Install python-selinux
+  yum: name=libselinux-python state=installed
+
+- name: Install python-keyczar for accelerated mode
+  yum: name={{ python_keyczar_url }} state=installed
+
+- name: Install additional yum packages
+  yum: name={{ item }} state=present
+  with_items: "{{ package_list }}"
+
+- name: disable selinux
+  selinux: state=disabled
+
+- name: Remove ntp daemon
+  yum: name=ntp state=absent
+ 
+- name: Disable iptables service
+  service: name=iptables state=stopped enabled=no
+
+- name: Change oracle password
+  user: name=oracle update_password=always password=$6$rounds=656000$D2zX.OL5j6iuNFsk$UQ8PdNUNxDlwO4MBRWDVLr8jHPabhu5FCErzJnNjfbYm5iVU7SsaHlr2na4dusVlnHd/T5WH.w1TGcX4OoNQ4.
+
+- name: allow oracle to sudo without password
+  lineinfile: "dest=/etc/sudoers line='{{ user_for_sudo }} ALL=(ALL) NOPASSWD: ALL' state=present"
+
+- name: disable requiretty
+  lineinfile: dest=/etc/sudoers line='#Defaults    requiretty' regexp='^Defaults    requiretty$' state=present

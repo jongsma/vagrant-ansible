@@ -1,0 +1,38 @@
+---
+- name: Check oraInventory
+  shell: cat /u01/app/oraInventory/ContentsXML/inventory.xml | grep OraDB12Home1 | cut -d\" -f4
+  register: rdbms_check
+
+- name: Check OCR
+  shell: /u01/app/12.1.0.2/grid/bin/crsctl stat res -w "(TYPE = ora.database.type) and (NAME = ora.{{db_name}}.db)" | wc -l
+  register: instance_check
+
+- name: Check if RDBMS software is installed   
+  fail: msg=" --- ORACLE_HOME is not installed --- " 
+  when: rdbms_check.stdout != rdbms_home
+
+- name: Check if instance exists
+  fail: msg=" --- Database already exists --- "
+  when: instance_check.stdout != "0"
+
+- name: Check if staging area exists
+  shell: ls -la {{ ora_stage }} | wc -l
+  register: ora_stage_exist
+
+- name: Create staging directory 
+  file: dest={{ ora_stage }} mode=775 owner={{ oracle_user }} group={{ oracle_group }} state=directory
+  when: ora_stage_exist.stdout =="0"
+  
+- name: Create response file from template
+  template: src={{ db_dbca_rsp }}.j2 dest={{ ora_stage }}/{{ db_dbca_rsp }} owner=oracle group=oinstall
+  when: inventory_hostname == "{{ gi_first_node }}" and ora_stage_exist.stdout == "0"
+
+- name: Create database(s)
+  shell: "time {{ rdbms_home }}/bin/dbca -silent -responseFile {{ ora_stage }}/{{ db_dbca_rsp }}"
+  become: true
+  become_user: oracle
+  register: dbca_output
+  when: inventory_hostname == "{{ gi_first_node }}"
+
+- name: Remove temporary install files
+  file: path={{ ora_stage }} state=absent
