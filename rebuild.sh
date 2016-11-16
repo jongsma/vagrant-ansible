@@ -106,13 +106,13 @@ command -v VBoxManage >/dev/null 2>&1 ||
 	fi
 
 # Recreate vboxnet0 with correct settings
-# VBoxManage hostonlyif remove vboxnet0
-# VBoxManage hostonlyif create
-# VBoxManage hostonlyif ipconfig vboxnet0 --ip 192.168.78.1 --netmask 255.255.255.0
+VBoxManage hostonlyif remove vboxnet0
+VBoxManage hostonlyif create
+VBoxManage hostonlyif ipconfig vboxnet0 --ip 192.168.78.1 --netmask 255.255.255.0
 
 # rebuild RAC
-# clear
-# vagrant destroy -f
-# vagrant up
+clear
+vagrant destroy -f
+vagrant up
 
 set +x

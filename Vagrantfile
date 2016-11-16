@@ -11,12 +11,12 @@ cpu           = 2                # CPU count per node
 devmanager    = "udev"           # Devive Manager [udev|asmlib]
 db_create_cdb = "true"           # Create CDB [true|false]
 db_pdb_amount = 1                # Amount of PDB's to create
-db_name       = "my_cdb"         # Name of (C)DB
+db_name       = "mycdb"          # Name of (C)DB
 db_total_mem  = 800              # Total amount of PGA + SGA in MB
 domain_name   = "mydomain.local" # Domain name of the RAC cluster
 
 Vagrant.configure(vagrant_api) do |config|
-config.vm.box = "oel68"
+config.vm.box = "jongsma/oel68"
 config.ssh.forward_x11   = true
 config.ssh.forward_agent = true
 
