@@ -2,7 +2,7 @@
 # set -x
 
 GETMOS="./getMOSPatch.jar"
-MOS_USERNAME="kjongsma@vxcompany.com"
+MOS_USERNAME=
 MOS_PASSWORD=
 GI_FILE_1="p21419221_121020_Linux-x86-64_5of10.zip"
 GI_FILE_1MD5="b8abeffd6c0837716e8b1706d5cebad8"
