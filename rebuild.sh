@@ -1,7 +1,14 @@
+#
+# rebuild your vagrant/rac cluster
+# 
+# Use at you own risk, only tested this on OSX/MacOS
+#
+
 #!/bin/bash
 # set -x
 
 GETMOS="./getMOSPatch.jar"
+# Your MOS username goes here, password is not needed getmospatch will ask for it
 MOS_USERNAME=
 MOS_PASSWORD=
 GI_FILE_1="p21419221_121020_Linux-x86-64_5of10.zip"
