@@ -46,10 +46,10 @@ config.ssh.forward_agent = true
 		vb.customize ['storagectl', :id, '--name', 'SATA', '--portcount', num_disks + 1]   
 	 
 		(1..num_disks).each do |disk|
-		    # Only create disks on "vagrant up" and when files do not exist
-			if ARGV[0] == "up" && ! File.exist?(ASM_LOC + "#{disk}.vdi")
-				# Disks get created when the first node gets created
-				if rac_id == 1
+			# Disks get created when the first node gets created
+			if rac_id == 1
+		    		# Only create disks on "vagrant up" and when files do not exist
+				if ARGV[0] == "up" && ! File.exist?(ASM_LOC + "#{disk}.vdi")
 					vb.customize ['createmedium',
 								'--filename', ASM_LOC + "#{disk}.vdi",
 								'--format', 'VDI',
@@ -58,15 +58,20 @@ config.ssh.forward_agent = true
 					vb.customize ['modifyhd',
 								 ASM_LOC + "#{disk}.vdi",
 								'--type', 'shareable']
-				end # End createmedium on node 1
-
+				end  # End if exist
+				# Delete Disks on "vagrant destroy"
+				if ARGV[0] == "destroy" 
+					vb.customize ['closemedium', 
+								ASM_LOC + "#{disk}.vdi",
+								'--delete']
+				end  # End if destroy
 				vb.customize ['storageattach', :id,
 						'--storagectl', 'SATA',
 						'--port', "#{disk}",
 						'--device', 0,
 						'--type', 'hdd',
 						'--medium', ASM_LOC + "#{disk}.vdi"]
-			end  # End if exist
+			end # End createmedium on node 1
 		end # End of EACH iterator for disks
 	  
 		# Workaound for Perl bug with root.sh segmentation fault
